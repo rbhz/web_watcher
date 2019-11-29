@@ -5,21 +5,27 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"notifiers"
 	"os"
 	"watcher"
+	"web"
 )
 
-type Arguments struct {
-	filePath string
-	period   int
+type arguments struct {
+	filePath   string
+	period     int
+	port       int
+	staticPath string
 }
 
-func getArguments() (args Arguments) {
+func getArguments() (args arguments) {
 	flag.Usage = func() {
 		fmt.Printf("Usage: %s [OPTIONS] path_to_file \n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.IntVar(&args.period, "period", 10, "Update period")
+	flag.IntVar(&args.port, "port", 8080, "Web server port")
+	flag.StringVar(&args.staticPath, "static", "src/web/static", "Path to static folder")
 	flag.Parse()
 	if flag.NArg() == 0 {
 		flag.Usage()
@@ -49,11 +55,15 @@ func readFile(path string) (lines []string) {
 
 func main() {
 	args := getArguments()
-	watcher := watcher.GetWatcher(readFile(args.filePath), args.period)
-	watcher.Start(func(new []int) {
-		urls := watcher.GetUrls()
-		for _, idx := range new {
-			fmt.Printf("%v updated\n", urls[idx].Url)
-		}
+	watcherInstance := watcher.GetWatcher(readFile(args.filePath), args.period)
+
+	// Start web interface
+	webServer := web.GetServer(watcherInstance, args.staticPath, args.port)
+	go webServer.Run()
+	var ns []watcher.Notifier
+	ns = append(ns, notifiers.WebNotifier{
+		Server: webServer,
 	})
+
+	watcherInstance.Start(ns)
 }

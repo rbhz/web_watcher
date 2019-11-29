@@ -1,66 +1,30 @@
 package watcher
 
 import (
-	"bytes"
-	"crypto/md5"
-	"io"
-	"net/http"
 	"sync"
 	"time"
 )
 
-type Url struct {
-	Url        string
-	Good       bool
-	LastUpdate time.Time
-	LastCheck  time.Time
-	lastHash   []byte
+// Notifier interface
+type Notifier interface {
+	Notify(updated []URL)
 }
 
-func (u *Url) Check() bool {
-	tr := &http.Transport{
-		IdleConnTimeout: 30 * time.Second,
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Get(u.Url)
-	if err != nil {
-		u.update([]byte{}, false)
-		return u.LastCheck == u.LastUpdate
-	}
-	defer resp.Body.Close()
-	hash := md5.New()
-	if _, err := io.Copy(hash, resp.Body); err != nil {
-		u.update([]byte{}, false)
-		return u.LastCheck == u.LastUpdate
-	}
-	var hashSum []byte = hash.Sum(nil)
-	u.update(hashSum, true)
-	return u.LastCheck == u.LastUpdate
-}
-func (u *Url) update(hash []byte, good bool) {
-	now := time.Now()
-	if bytes.Compare(u.lastHash, hash) != 0 || u.Good != good {
-		u.LastUpdate = now
-	}
-	u.lastHash = hash
-	u.Good = good
-	u.LastCheck = now
-}
-
+// Watcher check if urls changed
 type Watcher struct {
-	urls   []Url
+	urls   []URL
 	period int
 }
 
-func (w *Watcher) Check() []int {
-	var res []int
+// Check all urls
+func (w *Watcher) Check() (res []URL) {
 	var wg sync.WaitGroup
 	wg.Add(len(w.urls))
 	for idx := range w.urls {
 		go func(idx int) {
 			defer wg.Done()
 			if updated := w.urls[idx].Check(); updated {
-				res = append(res, idx)
+				res = append(res, w.urls[idx])
 			}
 		}(idx)
 	}
@@ -68,20 +32,27 @@ func (w *Watcher) Check() []int {
 	return res
 }
 
-func (w *Watcher) Start(callback func([]int)) {
+// Start watcher as daemon
+func (w *Watcher) Start(notifiers []Notifier) {
 	for {
-		callback(w.Check())
+		updated := w.Check()
+		for _, n := range notifiers {
+			n.Notify(updated)
+		}
 		time.Sleep(time.Duration(w.period) * time.Second)
 	}
 }
 
-func (w Watcher) GetUrls() []Url {
+// GetUrls return watchers urls slice
+func (w Watcher) GetUrls() []URL {
 	return w.urls
 }
+
+// GetWatcher returns watcher
 func GetWatcher(urls []string, period int) Watcher {
 	checker := Watcher{period: period}
 	for _, url := range urls {
-		checker.urls = append(checker.urls, Url{Url: url})
+		checker.urls = append(checker.urls, URL{Link: url})
 	}
 	return checker
 }
