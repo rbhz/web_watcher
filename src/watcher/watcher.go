@@ -1,6 +1,8 @@
 package watcher
 
 import (
+	"database/sql"
+	"log"
 	"sync"
 	"time"
 )
@@ -14,6 +16,8 @@ type Notifier interface {
 type Watcher struct {
 	urls   []URL
 	period int
+	dbPath string
+	db     *sql.DB
 }
 
 // Check all urls
@@ -34,13 +38,38 @@ func (w *Watcher) Check() (res []URL) {
 
 // Start watcher as daemon
 func (w *Watcher) Start(notifiers []Notifier) {
+	if w.db == nil {
+		w.initDB()
+	}
 	for {
 		updated := w.Check()
+		for _, url := range updated {
+			go url.save(w.db)
+		}
 		for _, n := range notifiers {
-			n.Notify(updated)
+			go n.Notify(updated)
 		}
 		time.Sleep(time.Duration(w.period) * time.Second)
 	}
+}
+
+func (w *Watcher) initDB() {
+	db, err := sql.Open("sqlite3", w.dbPath)
+	if err != nil {
+		log.Fatalf("Failed to open db: %v", err)
+	}
+	_, err = db.Exec(
+		`CREATE TABLE IF NOT EXISTS urls (
+			link VARCHAR(200) PRIMARY KEY,
+			last_change DATE NOT NULL,
+			hash BLOB NOT NULL,
+			good BOOL NOT NULL
+		);`,
+	)
+	if err != nil {
+		log.Fatalf("Failed to create table: %v", err)
+	}
+	w.db = db
 }
 
 // GetUrls return watchers urls slice
@@ -49,10 +78,17 @@ func (w Watcher) GetUrls() []URL {
 }
 
 // GetWatcher returns watcher
-func GetWatcher(urls []string, period int) Watcher {
-	checker := Watcher{period: period}
+func GetWatcher(urls []string, period int, db string) Watcher {
+	watcher := Watcher{period: period, dbPath: db}
+	watcher.initDB()
+	var wg sync.WaitGroup
+	wg.Add(len(urls))
 	for _, url := range urls {
-		checker.urls = append(checker.urls, URL{Link: url})
+		go func(url string) {
+			defer wg.Done()
+			watcher.urls = append(watcher.urls, getURL(url, watcher.db))
+		}(url)
 	}
-	return checker
+	wg.Wait()
+	return watcher
 }
