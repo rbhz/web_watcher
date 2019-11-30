@@ -13,6 +13,8 @@ type WebNotifier struct {
 
 // Notify web users
 func (n WebNotifier) Notify(updated []watcher.URL) {
-	data, _ := json.Marshal(updated)
-	n.Server.Broadcast(data)
+	if len(updated) > 0 {
+		data, _ := json.Marshal(updated)
+		n.Server.Broadcast(data)
+	}
 }
