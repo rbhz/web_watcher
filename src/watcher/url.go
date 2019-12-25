@@ -51,6 +51,7 @@ func (u *URL) save(db *sql.DB) (err error) {
 	if err != nil {
 		return
 	}
+	defer stmt.Close()
 	res, err := stmt.Exec(u.Link, u.LastChange, u.lastHash, u.Good)
 	if err != nil {
 		return
