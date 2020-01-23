@@ -7,52 +7,79 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
+)
+
+// Changed fields
+const (
+	StatusChange = iota
+	HashChange
+	ErrorChange
 )
 
 // URL struct
 type URL struct {
 	Link       string    `json:"url"`
-	Good       bool      `json:"good"`
 	LastChange time.Time `json:"last_change"`
-	LastCheck  time.Time `json:"-"`
-	lastHash   []byte
+	Status     int       `json:"status"`
+	Err        string    `json:"error"`
+	lastCheck  time.Time
+	hash       []byte
 }
 
-// Check if url data changed
-func (u *URL) Check() bool {
+// Update url
+func (u *URL) Update() URLUpdate {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(u.Link)
 	if err != nil {
-		u.update([]byte{}, false)
-		return u.LastCheck == u.LastChange
+		return u.change([]byte{}, 0, err)
 	}
 	defer resp.Body.Close()
 	hash := md5.New()
 	if _, err := io.Copy(hash, resp.Body); err != nil {
-		u.update([]byte{}, false)
-		return u.LastCheck == u.LastChange
+		return u.change([]byte{}, 0, err)
 	}
 	var hashSum []byte = hash.Sum(nil)
-	u.update(hashSum, resp.StatusCode == http.StatusOK)
-	return u.LastCheck == u.LastChange
+	return u.change(hashSum, resp.StatusCode, nil)
 }
-func (u *URL) update(hash []byte, good bool) {
+
+func (u *URL) change(hash []byte, status int, err error) URLUpdate {
 	now := time.Now()
-	if bytes.Compare(u.lastHash, hash) != 0 || u.Good != good {
-		u.LastChange = now
+	old := *u
+	var changes []int
+	if bytes.Compare(u.hash, hash) != 0 {
+		changes = append(changes, HashChange)
+		u.hash = hash
 	}
-	u.lastHash = hash
-	u.Good = good
-	u.LastCheck = now
+	if err != nil && err.Error() != u.Err {
+		changes = append(changes, ErrorChange)
+		u.Err = err.Error()
+		u.Status = 0
+	} else if status != u.Status {
+		changes = append(changes, ErrorChange)
+		u.Status = status
+		u.Err = ""
+	}
+	u.lastCheck = now
+	res := URLUpdate{
+		New:     u,
+		Old:     &old,
+		Changed: changes,
+	}
+	if len(changes) != 0 {
+		u.LastChange = u.lastCheck
+	}
+	return res
 }
+
 func (u *URL) save(db *sql.DB) (err error) {
-	stmt, err := db.Prepare("INSERT OR REPLACE INTO urls VALUES(?, ?, ?, ?)")
+	stmt, err := db.Prepare("INSERT OR REPLACE INTO urls VALUES(?, ?, ?, ?, ?)")
 	if err != nil {
 		return
 	}
 	defer stmt.Close()
-	res, err := stmt.Exec(u.Link, u.LastChange, u.lastHash, u.Good)
+	res, err := stmt.Exec(u.Link, u.LastChange, u.hash, u.Status, u.Err)
 	if err != nil {
 		return
 	}
@@ -63,14 +90,19 @@ func (u *URL) save(db *sql.DB) (err error) {
 	return
 }
 
+// Good return true if last request was successfull
+func (u URL) Good() bool {
+	return u.Err == "" && u.Status == http.StatusOK
+}
+
 func getURL(link string, db *sql.DB) (url URL) {
 	url.Link = link
 	err := db.QueryRow(
-		"SELECT last_change, hash, good FROM urls WHERE link=?;", url.Link,
-	).Scan(&url.LastChange, &url.lastHash, &url.Good)
+		"SELECT last_change, hash, status, error FROM urls WHERE link=?;", url.Link,
+	).Scan(&url.LastChange, &url.hash, &url.Status, &url.Err)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			url.Check()
+			url.Update()
 			err = url.save(db)
 			if err != nil {
 				log.Fatalf("Failed to save url to DB: %v", err)
@@ -81,4 +113,21 @@ func getURL(link string, db *sql.DB) (url URL) {
 		}
 	}
 	return
+}
+
+// URLUpdate contains information about url changes
+type URLUpdate struct {
+	New     *URL
+	Old     *URL
+	Changed []int
+}
+
+// Error return error description
+func (u URLUpdate) Error() string {
+	if u.New.Err != "" {
+		return u.New.Err
+	} else if u.New.Status != http.StatusOK {
+		return strconv.Itoa(u.New.Status) + " status"
+	}
+	return ""
 }

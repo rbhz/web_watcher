@@ -3,9 +3,10 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rbhz/http_checker/watcher"
 	"log"
 	"net/http"
+
+	"github.com/rbhz/http_checker/watcher"
 
 	"github.com/gorilla/websocket"
 )
@@ -27,7 +28,7 @@ func (s *Server) Run() {
 	fmt.Printf("Starting server on http://0.0.0.0:%v\n", s.port)
 	err := http.ListenAndServe(fmt.Sprintf(":%v", s.port), nil)
 	if err != nil {
-		panic(err)
+		log.Fatalf("%v\n", err)
 	}
 }
 

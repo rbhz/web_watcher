@@ -9,7 +9,7 @@ import (
 
 // Notifier interface
 type Notifier interface {
-	Notify(updated []URL)
+	Notify(updated []URLUpdate)
 }
 
 // Watcher check if urls changed
@@ -21,14 +21,15 @@ type Watcher struct {
 }
 
 // Check all urls
-func (w *Watcher) Check() (res []URL) {
+func (w *Watcher) Check() map[int]URLUpdate {
+	res := make(map[int]URLUpdate)
 	var wg sync.WaitGroup
 	wg.Add(len(w.urls))
 	for idx := range w.urls {
 		go func(idx int) {
 			defer wg.Done()
-			if updated := w.urls[idx].Check(); updated {
-				res = append(res, w.urls[idx])
+			if update := w.urls[idx].Update(); len(update.Changed) > 0 {
+				res[idx] = update
 			}
 		}(idx)
 	}
@@ -43,11 +44,14 @@ func (w *Watcher) Start(notifiers []Notifier) {
 	}
 	for range time.Tick(time.Duration(w.period) * time.Second) {
 		updated := w.Check()
-		for _, url := range updated {
-			go url.save(w.db)
+		urlsUpdates := make([]URLUpdate, 0, len(updated))
+		for idx, update := range updated {
+			urlsUpdates = append(urlsUpdates, update)
+			go w.urls[idx].save(w.db)
+
 		}
 		for _, n := range notifiers {
-			go n.Notify(updated)
+			go n.Notify(urlsUpdates)
 		}
 	}
 }
@@ -61,8 +65,9 @@ func (w *Watcher) initDB() {
 		`CREATE TABLE IF NOT EXISTS urls (
 			link VARCHAR(200) PRIMARY KEY,
 			last_change DATE NOT NULL,
-			hash BLOB NOT NULL,
-			good BOOL NOT NULL
+			hash BLOB,
+			status INT NOT NULL,
+			error VARCHAR(500) NOT NULL
 		);`,
 	)
 	if err != nil {

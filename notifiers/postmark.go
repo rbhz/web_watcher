@@ -34,11 +34,11 @@ type PostMarkNotifier struct {
 }
 
 // Notify via email
-func (n PostMarkNotifier) Notify(updated []watcher.URL) {
-	var failed []watcher.URL
-	for _, url := range updated {
-		if !url.Good {
-			failed = append(failed, url)
+func (n PostMarkNotifier) Notify(updates []watcher.URLUpdate) {
+	var failed []watcher.URLUpdate
+	for _, update := range updates {
+		if update.Old.Good() && !update.New.Good() {
+			failed = append(failed, update)
 		}
 	}
 	if len(failed) > 0 {
@@ -49,11 +49,13 @@ func (n PostMarkNotifier) Notify(updated []watcher.URL) {
 	}
 }
 
-func (n PostMarkNotifier) getMessage(urls []watcher.URL) string {
+func (n PostMarkNotifier) getMessage(updates []watcher.URLUpdate) string {
 	t := template.New("Message")
-	t.Parse(n.messageText + ":{{ range $_, $url := $ }}\n{{$url.Link}}{{end}}")
+	t.Parse(
+		n.messageText + ":{{ range $_, $update := $ }}\n{{$update.New.Link}} - {{$update.Error}} {{end}}",
+	)
 	var tpl bytes.Buffer
-	t.Execute(&tpl, urls)
+	t.Execute(&tpl, updates)
 	return tpl.String()
 }
 
@@ -93,13 +95,13 @@ func (n PostMarkNotifier) sendMessage(to []string, text string) {
 // NewPostMarkNotifier creates notifier
 func NewPostMarkNotifier(emails []string, token, from, subject, messageText string) PostMarkNotifier {
 	if len(emails) == 0 {
-		panic("Specify Postmark emails or deactivate postmark")
+		log.Fatal("Specify Postmark emails or deactivate postmark")
 	}
 	if token == "" {
-		panic("Specify Postmark token or deactivate postmark")
+		log.Fatal("Specify Postmark token or deactivate postmark")
 	}
 	if from == "" {
-		panic("Specify Postmark from address or deactivate postmark")
+		log.Fatal("Specify Postmark from address or deactivate postmark")
 	}
 	return PostMarkNotifier{
 		emails:      emails,

@@ -3,7 +3,7 @@ package main
 // Config definition for yaml configuration
 type Config struct {
 	Period int    `default:"10"`
-	DBPath string `default:"./.watcher.db"`
+	DBPath string `default:"./.checker.db"`
 	Web    struct {
 		Active bool `default:"false"`
 		Port   int  `default:"8080"`
