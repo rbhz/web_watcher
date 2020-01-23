@@ -76,6 +76,8 @@ func main() {
 			conf.PostMark.Emails,
 			conf.PostMark.APIKey,
 			conf.PostMark.FromEmail,
+			conf.PostMark.Subject,
+			conf.PostMark.MessageText,
 		))
 	}
 	watcherInstance.Start(ns)

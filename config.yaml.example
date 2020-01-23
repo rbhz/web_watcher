@@ -8,3 +8,5 @@ postmark:
   fromemail: "from@example.com"
   emails:
     - "user@example.com"
+  subject: "Http checker errors"
+  messagetext: "Request failed for"

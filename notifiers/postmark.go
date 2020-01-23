@@ -26,9 +26,11 @@ type postmarkRequestData struct {
 
 // PostMarkNotifier Sends notifications via PostMarkAPI
 type PostMarkNotifier struct {
-	emails    []string
-	token     string
-	fromEmail string
+	emails      []string
+	token       string
+	fromEmail   string
+	subject     string
+	messageText string
 }
 
 // Notify via email
@@ -43,25 +45,24 @@ func (n PostMarkNotifier) Notify(updated []watcher.URL) {
 		n.sendMessage(
 			n.emails,
 			n.getMessage(failed),
-			"Http checker errors",
 		)
 	}
 }
 
 func (n PostMarkNotifier) getMessage(urls []watcher.URL) string {
 	t := template.New("Message")
-	t.Parse("Requests failed for:{{ range $_, $url := $ }}\n{{$url.Link}}{{end}}")
+	t.Parse(n.messageText + ":{{ range $_, $url := $ }}\n{{$url.Link}}{{end}}")
 	var tpl bytes.Buffer
 	t.Execute(&tpl, urls)
 	return tpl.String()
 }
 
-func (n PostMarkNotifier) sendMessage(to []string, text string, subject string) {
+func (n PostMarkNotifier) sendMessage(to []string, text string) {
 	data, err := json.Marshal(&postmarkRequestData{
 		From:     n.fromEmail,
 		To:       to[0],
 		CC:       strings.Join(to[1:], ","),
-		Subject:  subject,
+		Subject:  n.subject,
 		TextBody: text,
 	})
 	if err != nil {
@@ -90,7 +91,7 @@ func (n PostMarkNotifier) sendMessage(to []string, text string, subject string) 
 }
 
 // NewPostMarkNotifier creates notifier
-func NewPostMarkNotifier(emails []string, token string, from string) PostMarkNotifier {
+func NewPostMarkNotifier(emails []string, token, from, subject, messageText string) PostMarkNotifier {
 	if len(emails) == 0 {
 		panic("Specify Postmark emails or deactivate postmark")
 	}
@@ -101,8 +102,10 @@ func NewPostMarkNotifier(emails []string, token string, from string) PostMarkNot
 		panic("Specify Postmark from address or deactivate postmark")
 	}
 	return PostMarkNotifier{
-		emails:    emails,
-		token:     token,
-		fromEmail: from,
+		emails:      emails,
+		token:       token,
+		fromEmail:   from,
+		subject:     subject,
+		messageText: messageText,
 	}
 }
