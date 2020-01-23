@@ -4,21 +4,20 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
+	"os"
+
+	"github.com/jinzhu/configor"
 	"github.com/rbhz/http_checker/notifiers"
 	"github.com/rbhz/http_checker/watcher"
 	"github.com/rbhz/http_checker/web"
-	"log"
-	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type arguments struct {
-	filePath   string
-	period     int
-	port       int
-	staticPath string
-	dbPath     string
+	filePath string
+	confPath string
 }
 
 func getArguments() (args arguments) {
@@ -26,10 +25,7 @@ func getArguments() (args arguments) {
 		fmt.Printf("Usage: %s [OPTIONS] path_to_file \n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	flag.IntVar(&args.period, "period", 10, "Update period")
-	flag.IntVar(&args.port, "port", 8080, "Web server port")
-	flag.StringVar(&args.staticPath, "static", "./web/static", "Path to static folder")
-	flag.StringVar(&args.dbPath, "sqlite", "./watcher.db", "Path to sqlite file")
+	flag.StringVar(&args.confPath, "conf", "./config.yaml", "Path to config")
 	flag.Parse()
 	if flag.NArg() == 0 {
 		flag.Usage()
@@ -59,18 +55,28 @@ func readFile(path string) (lines []string) {
 
 func main() {
 	args := getArguments()
+	conf := &Config{}
+	configor.Load(conf, args.confPath)
 	watcherInstance := watcher.NewWatcher(
 		readFile(args.filePath),
-		args.period,
-		args.dbPath,
+		conf.Period,
+		conf.DBPath,
 	)
 
-	// Start web interface
-	webServer := web.GetServer(watcherInstance, args.staticPath, args.port)
-	go webServer.Run()
 	var ns []watcher.Notifier
-	ns = append(ns, notifiers.WebNotifier{
-		Server: webServer,
-	})
+	if conf.Web.Active {
+		webServer := web.GetServer(watcherInstance, conf.Web.Port)
+		go webServer.Run()
+		ns = append(ns, notifiers.WebNotifier{
+			Server: webServer,
+		})
+	}
+	if conf.PostMark.Active {
+		ns = append(ns, notifiers.NewPostMarkNotifier(
+			conf.PostMark.Emails,
+			conf.PostMark.APIKey,
+			conf.PostMark.FromEmail,
+		))
+	}
 	watcherInstance.Start(ns)
 }

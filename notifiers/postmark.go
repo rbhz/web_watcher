@@ -84,10 +84,22 @@ func (n PostMarkNotifier) sendMessage(to []string, text string, subject string) 
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Postmark returned invalid code: %v", resp.StatusCode)
+	}
 }
 
 // NewPostMarkNotifier creates notifier
 func NewPostMarkNotifier(emails []string, token string, from string) PostMarkNotifier {
+	if len(emails) == 0 {
+		panic("Specify Postmark emails or deactivate postmark")
+	}
+	if token == "" {
+		panic("Specify Postmark token or deactivate postmark")
+	}
+	if from == "" {
+		panic("Specify Postmark from address or deactivate postmark")
+	}
 	return PostMarkNotifier{
 		emails:    emails,
 		token:     token,

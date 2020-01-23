@@ -14,16 +14,14 @@ var upgrader = websocket.Upgrader{}
 
 // Server with rest api & static
 type Server struct {
-	watcher    watcher.Watcher
-	staticPath string
-	port       int
-	sockets    map[string]*websocket.Conn
+	watcher watcher.Watcher
+	port    int
+	sockets map[string]*websocket.Conn
 }
 
 // Run web server
 func (s *Server) Run() {
-	fs := http.FileServer(http.Dir(s.staticPath))
-	http.Handle("/", fs)
+	http.HandleFunc("/", s.index)
 	http.HandleFunc("/api/list", s.list)
 	http.HandleFunc("/ws", s.upgrade)
 	fmt.Printf("Starting server on http://0.0.0.0:%v\n", s.port)
@@ -31,6 +29,10 @@ func (s *Server) Run() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (s *Server) index(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(indexPageTemplate))
 }
 
 func (s *Server) list(w http.ResponseWriter, r *http.Request) {
@@ -66,11 +68,10 @@ func (s *Server) Broadcast(message []byte) {
 }
 
 // GetServer returns web server
-func GetServer(w watcher.Watcher, static string, port int) Server {
+func GetServer(w watcher.Watcher, port int) Server {
 	return Server{
-		watcher:    w,
-		staticPath: static,
-		port:       port,
-		sockets:    make(map[string]*websocket.Conn),
+		watcher: w,
+		port:    port,
+		sockets: make(map[string]*websocket.Conn),
 	}
 }

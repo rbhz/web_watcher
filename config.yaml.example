@@ -1,0 +1,10 @@
+period: 10
+web:
+  active: true
+  port: 8080
+postmark:
+  active: false
+  apikey: "key"
+  fromemail: "from@example.com"
+  emails:
+    - "user@example.com"

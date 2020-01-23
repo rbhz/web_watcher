@@ -1,3 +1,6 @@
+package web
+
+const indexPageTemplate = `
 <!doctype html>
 <html lang="en">
   <head>
@@ -48,7 +51,7 @@
                     row.find('.change').text(changed.toLocaleString());
                 }
 
-                ws = new WebSocket(`ws://${window.location.host}/ws`);
+                ws = new WebSocket('ws://'+window.location.host+'/ws');
                 ws.onopen = function(evt) {
                     console.log("ws OPEN");
                 }
@@ -59,7 +62,7 @@
                     data = JSON.parse(evt.data)
                     for (var idx = 0; idx < data.length; idx++) {
                         let item = data[idx];
-                        let row = $(`a[href="${item.url}"]`).parents('tr');
+                        let row = $('a[href="' +item.url+'"]').parents('tr');
                         changed = new Date(item.last_change);
                         row.find('.change').text(changed.toLocaleString());
                     }
@@ -72,3 +75,4 @@
     </script>
   </body>
 </html>
+`
