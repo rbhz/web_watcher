@@ -41,7 +41,7 @@ func (w *Watcher) Start(notifiers []Notifier) {
 	if w.db == nil {
 		w.initDB()
 	}
-	for {
+	for range time.Tick(time.Duration(w.period) * time.Second) {
 		updated := w.Check()
 		for _, url := range updated {
 			go url.save(w.db)
@@ -49,7 +49,6 @@ func (w *Watcher) Start(notifiers []Notifier) {
 		for _, n := range notifiers {
 			go n.Notify(updated)
 		}
-		time.Sleep(time.Duration(w.period) * time.Second)
 	}
 }
 
@@ -77,8 +76,8 @@ func (w Watcher) GetUrls() []URL {
 	return w.urls
 }
 
-// GetWatcher returns watcher
-func GetWatcher(urls []string, period int, db string) Watcher {
+// NewWatcher returns watcher
+func NewWatcher(urls []string, period int, db string) Watcher {
 	watcher := Watcher{period: period, dbPath: db}
 	watcher.initDB()
 	var wg sync.WaitGroup

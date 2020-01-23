@@ -2,8 +2,8 @@ package notifiers
 
 import (
 	"encoding/json"
-	"watcher"
-	"web"
+	"github.com/rbhz/http_checker/watcher"
+	"github.com/rbhz/http_checker/web"
 )
 
 // WebNotifier Send notifications for web users

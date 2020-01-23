@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/rbhz/http_checker/notifiers"
+	"github.com/rbhz/http_checker/watcher"
+	"github.com/rbhz/http_checker/web"
 	"log"
-	"notifiers"
 	"os"
-	"watcher"
-	"web"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -28,7 +28,7 @@ func getArguments() (args arguments) {
 	}
 	flag.IntVar(&args.period, "period", 10, "Update period")
 	flag.IntVar(&args.port, "port", 8080, "Web server port")
-	flag.StringVar(&args.staticPath, "static", "src/web/static", "Path to static folder")
+	flag.StringVar(&args.staticPath, "static", "./web/static", "Path to static folder")
 	flag.StringVar(&args.dbPath, "sqlite", "./watcher.db", "Path to sqlite file")
 	flag.Parse()
 	if flag.NArg() == 0 {
@@ -59,7 +59,7 @@ func readFile(path string) (lines []string) {
 
 func main() {
 	args := getArguments()
-	watcherInstance := watcher.GetWatcher(
+	watcherInstance := watcher.NewWatcher(
 		readFile(args.filePath),
 		args.period,
 		args.dbPath,
@@ -72,6 +72,5 @@ func main() {
 	ns = append(ns, notifiers.WebNotifier{
 		Server: webServer,
 	})
-
 	watcherInstance.Start(ns)
 }

@@ -34,7 +34,7 @@ func (u *URL) Check() bool {
 		return u.LastCheck == u.LastChange
 	}
 	var hashSum []byte = hash.Sum(nil)
-	u.update(hashSum, true)
+	u.update(hashSum, resp.StatusCode == http.StatusOK)
 	return u.LastCheck == u.LastChange
 }
 func (u *URL) update(hash []byte, good bool) {

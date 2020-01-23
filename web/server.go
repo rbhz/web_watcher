@@ -3,9 +3,9 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/rbhz/http_checker/watcher"
 	"log"
 	"net/http"
-	"watcher"
 
 	"github.com/gorilla/websocket"
 )
@@ -27,7 +27,10 @@ func (s *Server) Run() {
 	http.HandleFunc("/api/list", s.list)
 	http.HandleFunc("/ws", s.upgrade)
 	fmt.Printf("Starting server on http://0.0.0.0:%v\n", s.port)
-	http.ListenAndServe(fmt.Sprintf(":%v", s.port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%v", s.port), nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (s *Server) list(w http.ResponseWriter, r *http.Request) {
