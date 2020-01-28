@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
     - name: build
       run: docker run --rm -v $(pwd):/usr/src/myapp -w /usr/src/myapp golang:1.13-stretch go build -v -o checker ./app/
 
