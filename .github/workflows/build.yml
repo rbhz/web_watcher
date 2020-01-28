@@ -1,0 +1,20 @@
+name: build
+on:
+  push:
+    branches:
+      - master
+jobs:
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: build
+      run: docker run --rm -v "$PWD":/usr/src/myapp -w /usr/src/myapp golang:1.13-stretch go build -v -o checker ./app
+
+    - name: build and push image
+      run: |
+        docker build -t rbhz/http_checker:latest .
+        docker login --username ${{ secrets.DOCKERHUB_USER }} --password ${{ secrets.DOCKERHUB_PASSWD }}
+        docker push rbhz/http_checker:latest
