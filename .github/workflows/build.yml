@@ -11,7 +11,7 @@ jobs:
     steps:
 
     - name: build
-      run: docker run --rm -v "$PWD":/usr/src/myapp -w /usr/src/myapp golang:1.13-stretch go build -v -o checker ./app
+      run: docker run --rm -v `pwd`:/usr/src/myapp -w /usr/src/myapp golang:1.13-stretch go build -v -o checker ./app/
 
     - name: build and push image
       run: |
