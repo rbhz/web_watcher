@@ -56,7 +56,10 @@ func readFile(path string) (lines []string) {
 func main() {
 	args := getArguments()
 	conf := &Config{}
-	configor.Load(conf, args.confPath)
+	err := configor.Load(conf, args.confPath)
+	if err != nil {
+		log.Fatal(err)
+	}
 	watcherInstance := watcher.NewWatcher(
 		readFile(args.filePath),
 		conf.Period,
@@ -78,6 +81,13 @@ func main() {
 			conf.PostMark.FromEmail,
 			conf.PostMark.Subject,
 			conf.PostMark.MessageText,
+		))
+	}
+	if conf.Telegram.Active {
+		ns = append(ns, notifiers.NewTelegramNotifier(
+			conf.Telegram.BotToken,
+			conf.Telegram.Users,
+			conf.Telegram.MessageText,
 		))
 	}
 	watcherInstance.Start(ns)

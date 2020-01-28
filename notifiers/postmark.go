@@ -3,7 +3,6 @@ package notifiers
 import (
 	"bytes"
 	"encoding/json"
-	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -35,28 +34,13 @@ type PostMarkNotifier struct {
 
 // Notify via email
 func (n PostMarkNotifier) Notify(updates []watcher.URLUpdate) {
-	var failed []watcher.URLUpdate
-	for _, update := range updates {
-		if update.Old.Good() && !update.New.Good() {
-			failed = append(failed, update)
-		}
-	}
-	if len(failed) > 0 {
+	updates = filterFails(updates)
+	if len(updates) > 0 {
 		n.sendMessage(
 			n.emails,
-			n.getMessage(failed),
+			getMessage(updates, n.messageText),
 		)
 	}
-}
-
-func (n PostMarkNotifier) getMessage(updates []watcher.URLUpdate) string {
-	t := template.New("Message")
-	t.Parse(
-		n.messageText + ":{{ range $_, $update := $ }}\n{{$update.New.Link}} - {{$update.Error}} {{end}}",
-	)
-	var tpl bytes.Buffer
-	t.Execute(&tpl, updates)
-	return tpl.String()
 }
 
 func (n PostMarkNotifier) sendMessage(to []string, text string) {

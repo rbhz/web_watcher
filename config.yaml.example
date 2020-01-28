@@ -10,3 +10,10 @@ postmark:
     - "user@example.com"
   subject: "Http checker errors"
   messagetext: "Request failed for"
+telegram:
+  active: false
+  bottoken: "SomeToken"
+  messagetext: "Request failed for"
+  users:
+    - 1
+    - 2

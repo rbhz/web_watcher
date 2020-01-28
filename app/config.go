@@ -15,5 +15,13 @@ type Config struct {
 		FromEmail   string
 		Subject     string `default:"Http checker errors"`
 		MessageText string `default:"Request failed for"`
+		OnlyErrors  bool   `default:"false"`
+	}
+	Telegram struct {
+		Active      bool `default:"false"`
+		BotToken    string
+		Users       []int64
+		MessageText string `default:"Request failed for"`
+		OnlyErrors  bool   `default:"false"`
 	}
 }
