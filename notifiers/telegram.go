@@ -29,7 +29,10 @@ func (n TelegramNotifier) Notify(updates []watcher.URLUpdate) {
 // SendMessage to telegram user
 func (n TelegramNotifier) SendMessage(user int64, message string) {
 	msg := tgbotapi.NewMessage(user, message)
-	n.bot.Send(msg)
+	_, err := n.bot.Send(msg)
+	if err != nil {
+		log.Printf("Failed to send telegram message: %v", err)
+	}
 }
 
 // NewTelegramNotifier creates notifier
