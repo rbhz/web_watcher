@@ -10,7 +10,6 @@ import (
 	"github.com/jinzhu/configor"
 	"github.com/rbhz/web_watcher/notifiers"
 	"github.com/rbhz/web_watcher/watcher"
-	"github.com/rbhz/web_watcher/web"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -66,27 +65,16 @@ func main() {
 
 	var ns []watcher.Notifier
 	if conf.Web.Active {
-		webServer := web.GetServer(watcherInstance, conf.Web.Port)
-		go webServer.Run()
-		ns = append(ns, notifiers.WebNotifier{
-			Server: webServer,
-		})
+		webNotifier := notifiers.NewWebNotifier(conf.Web, watcherInstance)
+		go webNotifier.Server.Run()
+		ns = append(ns, webNotifier)
+
 	}
 	// if conf.PostMark.Active {
-	// 	ns = append(ns, notifiers.NewPostMarkNotifier(
-	// 		conf.PostMark.Emails,
-	// 		conf.PostMark.APIKey,
-	// 		conf.PostMark.FromEmail,
-	// 		conf.PostMark.Subject,
-	// 		conf.PostMark.MessageText,
-	// 	))
+	// 	ns = append(ns, notifiers.NewPostMarkNotifier(conf.PostMark))
 	// }
 	// if conf.Telegram.Active {
-	// 	ns = append(ns, notifiers.NewTelegramNotifier(
-	// 		conf.Telegram.BotToken,
-	// 		conf.Telegram.Users,
-	// 		conf.Telegram.MessageText,
-	// 	))
+	// 	ns = append(ns, notifiers.NewTelegramNotifier(conf.Telegram))
 	// }
 	watcherInstance.Start(ns)
 }

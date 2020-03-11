@@ -77,21 +77,21 @@ func (n PostMarkNotifier) sendMessage(to []string, text string) {
 }
 
 // NewPostMarkNotifier creates notifier
-func NewPostMarkNotifier(emails []string, token, from, subject, messageText string) PostMarkNotifier {
-	if len(emails) == 0 {
+func NewPostMarkNotifier(cfg PostMarkConfig) PostMarkNotifier {
+	if len(cfg.Emails) == 0 {
 		log.Fatal("Specify Postmark emails or deactivate postmark")
 	}
-	if token == "" {
+	if cfg.APIKey == "" {
 		log.Fatal("Specify Postmark token or deactivate postmark")
 	}
-	if from == "" {
+	if cfg.FromEmail == "" {
 		log.Fatal("Specify Postmark from address or deactivate postmark")
 	}
 	return PostMarkNotifier{
-		emails:      emails,
-		token:       token,
-		fromEmail:   from,
-		subject:     subject,
-		messageText: messageText,
+		emails:      cfg.Emails,
+		token:       cfg.APIKey,
+		fromEmail:   cfg.FromEmail,
+		subject:     cfg.Subject,
+		messageText: cfg.MessageText,
 	}
 }

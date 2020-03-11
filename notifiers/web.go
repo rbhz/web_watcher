@@ -20,3 +20,10 @@ func (n WebNotifier) Notify(update watcher.URLUpdate) {
 	}
 	n.Server.Broadcast(data)
 }
+
+// NewWebNotifier initialize web notifier instance
+func NewWebNotifier(cfg WebConfig, watcher watcher.Watcher) WebNotifier {
+	return WebNotifier{
+		Server: web.GetServer(watcher, cfg.Port),
+	}
+}

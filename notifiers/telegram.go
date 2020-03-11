@@ -36,14 +36,14 @@ func (n TelegramNotifier) SendMessage(user int64, message string) {
 }
 
 // NewTelegramNotifier creates notifier
-func NewTelegramNotifier(token string, users []int64, messageText string) TelegramNotifier {
-	bot, err := tgbotapi.NewBotAPI(token)
+func NewTelegramNotifier(cfg TelegramConfig) TelegramNotifier {
+	bot, err := tgbotapi.NewBotAPI(cfg.BotToken)
 	if err != nil {
 		log.Fatalf("Failed to initialize Telegram bot: %v", err)
 	}
 	return TelegramNotifier{
 		bot:         bot,
-		users:       users,
-		messageText: messageText,
+		users:       cfg.Users,
+		messageText: cfg.MessageText,
 	}
 }
