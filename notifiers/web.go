@@ -3,8 +3,8 @@ package notifiers
 import (
 	"encoding/json"
 
-	"github.com/rbhz/http_checker/watcher"
-	"github.com/rbhz/http_checker/web"
+	"github.com/rbhz/web_watcher/watcher"
+	"github.com/rbhz/web_watcher/web"
 )
 
 // WebNotifier Send notifications for web users

@@ -18,6 +18,6 @@ jobs:
 
     - name: build and push image
       run: |
-        docker build -t rbhz/http_checker:latest .
+        docker build -t rbhz/web_watcher:latest .
         docker login --username ${{ secrets.DOCKERHUB_USER }} --password ${{ secrets.DOCKERHUB_PASSWD }}
-        docker push rbhz/http_checker:latest
+        docker push rbhz/web_watcher:latest

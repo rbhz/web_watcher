@@ -4,7 +4,7 @@ import (
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/rbhz/http_checker/watcher"
+	"github.com/rbhz/web_watcher/watcher"
 )
 
 // TelegramNotifier Sends notifications via TelegramBotAPI

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"html/template"
 
-	"github.com/rbhz/http_checker/watcher"
+	"github.com/rbhz/web_watcher/watcher"
 )
 
 func getMessage(updates []watcher.URLUpdate, messageText string) string {

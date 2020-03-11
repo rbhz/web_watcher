@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rbhz/http_checker/watcher"
+	"github.com/rbhz/web_watcher/watcher"
 )
 
 const (

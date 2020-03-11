@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/rbhz/http_checker/watcher"
+	"github.com/rbhz/web_watcher/watcher"
 
 	"github.com/gorilla/websocket"
 )

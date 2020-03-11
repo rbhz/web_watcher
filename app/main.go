@@ -8,9 +8,9 @@ import (
 	"os"
 
 	"github.com/jinzhu/configor"
-	"github.com/rbhz/http_checker/notifiers"
-	"github.com/rbhz/http_checker/watcher"
-	"github.com/rbhz/http_checker/web"
+	"github.com/rbhz/web_watcher/notifiers"
+	"github.com/rbhz/web_watcher/watcher"
+	"github.com/rbhz/web_watcher/web"
 
 	_ "github.com/mattn/go-sqlite3"
 )
