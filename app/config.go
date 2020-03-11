@@ -1,10 +1,11 @@
 package main
 
+import "github.com/rbhz/web_watcher/watcher"
+
 // Config definition for yaml configuration
 type Config struct {
-	Period int    `default:"10"`
-	DBPath string `default:"./.checker.db"`
-	Web    struct {
+	App watcher.Config
+	Web struct {
 		Active bool `default:"false"`
 		Port   int  `default:"8080"`
 	}

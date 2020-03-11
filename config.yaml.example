@@ -1,4 +1,7 @@
-period: 10
+app:
+  period: 10
+  errorperiod: 1
+  db: "./watcher.db"
 web:
   active: true
   port: 8080

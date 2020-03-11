@@ -62,9 +62,7 @@ func main() {
 	}
 	watcherInstance := watcher.NewWatcher(
 		readFile(args.filePath),
-		conf.Period,
-		conf.DBPath,
-	)
+		conf.App)
 
 	var ns []watcher.Notifier
 	if conf.Web.Active {
@@ -74,21 +72,21 @@ func main() {
 			Server: webServer,
 		})
 	}
-	if conf.PostMark.Active {
-		ns = append(ns, notifiers.NewPostMarkNotifier(
-			conf.PostMark.Emails,
-			conf.PostMark.APIKey,
-			conf.PostMark.FromEmail,
-			conf.PostMark.Subject,
-			conf.PostMark.MessageText,
-		))
-	}
-	if conf.Telegram.Active {
-		ns = append(ns, notifiers.NewTelegramNotifier(
-			conf.Telegram.BotToken,
-			conf.Telegram.Users,
-			conf.Telegram.MessageText,
-		))
-	}
+	// if conf.PostMark.Active {
+	// 	ns = append(ns, notifiers.NewPostMarkNotifier(
+	// 		conf.PostMark.Emails,
+	// 		conf.PostMark.APIKey,
+	// 		conf.PostMark.FromEmail,
+	// 		conf.PostMark.Subject,
+	// 		conf.PostMark.MessageText,
+	// 	))
+	// }
+	// if conf.Telegram.Active {
+	// 	ns = append(ns, notifiers.NewTelegramNotifier(
+	// 		conf.Telegram.BotToken,
+	// 		conf.Telegram.Users,
+	// 		conf.Telegram.MessageText,
+	// 	))
+	// }
 	watcherInstance.Start(ns)
 }

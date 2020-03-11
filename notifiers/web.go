@@ -13,13 +13,10 @@ type WebNotifier struct {
 }
 
 // Notify web users
-func (n WebNotifier) Notify(updates []watcher.URLUpdate) {
-	if len(updates) > 0 {
-		urls := make([]*watcher.URL, len(updates))
-		for idx, update := range updates {
-			urls[idx] = update.New
-		}
-		data, _ := json.Marshal(urls)
-		n.Server.Broadcast(data)
+func (n WebNotifier) Notify(update watcher.URLUpdate) {
+	data, err := json.Marshal(update.New)
+	if err != nil {
+		return
 	}
+	n.Server.Broadcast(data)
 }

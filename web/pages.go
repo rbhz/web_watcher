@@ -59,13 +59,10 @@ const indexPageTemplate = `
                     console.log("ws CLOSE");
                 }
                 ws.onmessage = function(evt) {
-                    data = JSON.parse(evt.data)
-                    for (var idx = 0; idx < data.length; idx++) {
-                        let item = data[idx];
-                        let row = $('a[href="' +item.url+'"]').parents('tr');
-                        changed = new Date(item.last_change);
+                    data = JSON.parse(evt.data);
+                        let row = $('a[href="' +data.url+'"]').parents('tr');
+                        changed = new Date(data.last_change);
                         row.find('.change').text(changed.toLocaleString());
-                    }
                 }
                 ws.onerror = function(evt) {
                     console.log("ws ERROR: " + evt.data);

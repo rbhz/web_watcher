@@ -20,6 +20,7 @@ const (
 
 // URL struct
 type URL struct {
+	id         int
 	Link       string    `json:"url"`
 	LastChange time.Time `json:"last_change"`
 	Status     int       `json:"status"`
@@ -95,8 +96,11 @@ func (u URL) Good() bool {
 	return u.Err == "" && u.Status == http.StatusOK
 }
 
-func getURL(link string, db *sql.DB) (url URL) {
-	url.Link = link
+func getURL(id int, link string, db *sql.DB) *URL {
+	url := &URL{
+		id:        id,
+		Link:      link,
+		lastCheck: time.Now()}
 	err := db.QueryRow(
 		"SELECT last_change, hash, status, error FROM urls WHERE link=?;", url.Link,
 	).Scan(&url.LastChange, &url.hash, &url.Status, &url.Err)
@@ -112,7 +116,7 @@ func getURL(link string, db *sql.DB) (url URL) {
 
 		}
 	}
-	return
+	return url
 }
 
 // URLUpdate contains information about url changes

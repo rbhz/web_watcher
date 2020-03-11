@@ -1,12 +1,11 @@
 module github.com/rbhz/web_watcher
 
-go 1.13
+go 1.14
 
 require (
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
 	github.com/gorilla/websocket v1.4.1
 	github.com/jinzhu/configor v1.1.1
-	github.com/mattn/go-sqlite3 v2.0.2+incompatible
-	github.com/rbhz/web_watcher v0.0.0-20200129071051-3ee828e70622
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 )

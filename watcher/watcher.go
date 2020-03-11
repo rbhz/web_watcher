@@ -9,50 +9,59 @@ import (
 
 // Notifier interface
 type Notifier interface {
-	Notify(updated []URLUpdate)
+	Notify(updated URLUpdate)
 }
 
 // Watcher check if urls changed
 type Watcher struct {
-	urls   []URL
-	period int
-	dbPath string
-	db     *sql.DB
-}
-
-// Check all urls
-func (w *Watcher) Check() map[int]URLUpdate {
-	res := make(map[int]URLUpdate)
-	var wg sync.WaitGroup
-	wg.Add(len(w.urls))
-	for idx := range w.urls {
-		go func(idx int) {
-			defer wg.Done()
-			if update := w.urls[idx].Update(); len(update.Changed) > 0 {
-				res[idx] = update
-			}
-		}(idx)
-	}
-	wg.Wait()
-	return res
+	urls        []*URL
+	period      time.Duration
+	errorPeriod time.Duration
+	dbPath      string
+	db          *sql.DB
 }
 
 // Start watcher as daemon
 func (w *Watcher) Start(notifiers []Notifier) {
-	if w.db == nil {
-		w.initDB()
-	}
-	for range time.Tick(time.Duration(w.period) * time.Second) {
-		updated := w.Check()
-		urlsUpdates := make([]URLUpdate, 0, len(updated))
-		for idx, update := range updated {
-			urlsUpdates = append(urlsUpdates, update)
-			go w.urls[idx].save(w.db)
+	checking := make(map[int]bool)
+	forCheck := make(chan *URL)
+	updates := make(chan URLUpdate)
 
+	for i := 0; i <= len(w.urls)/2; i++ {
+		// Start workers
+		go w.worker(forCheck, updates)
+	}
+	for {
+		select {
+		case <-time.Tick(100 * time.Millisecond):
+			now := time.Now()
+			for idx, url := range w.urls {
+				var period time.Duration
+				if url.Good() {
+					period = w.period * time.Second
+				} else {
+					period = w.errorPeriod * time.Second
+				}
+				if _, ok := checking[idx]; !ok &&
+					url.lastCheck.Add(period).Before(now) {
+					checking[idx] = true
+					forCheck <- url
+				}
+			}
+		case update := <-updates:
+			delete(checking, update.Old.id)
+			if len(update.Changed) > 0 {
+				for _, n := range notifiers {
+					go n.Notify(update)
+				}
+			}
 		}
-		for _, n := range notifiers {
-			go n.Notify(urlsUpdates)
-		}
+	}
+}
+
+func (w *Watcher) worker(in <-chan *URL, out chan<- URLUpdate) {
+	for url := range in {
+		out <- url.Update()
 	}
 }
 
@@ -77,20 +86,23 @@ func (w *Watcher) initDB() {
 }
 
 // GetUrls return watchers urls slice
-func (w Watcher) GetUrls() []URL {
+func (w Watcher) GetUrls() []*URL {
 	return w.urls
 }
 
 // NewWatcher returns watcher
-func NewWatcher(urls []string, period int, db string) Watcher {
-	watcher := Watcher{period: period, dbPath: db}
+func NewWatcher(urls []string, cfg Config) Watcher {
+	watcher := Watcher{
+		period:      cfg.Period,
+		errorPeriod: cfg.ErrorPeriod,
+		dbPath:      cfg.DBPath}
 	watcher.initDB()
 	var wg sync.WaitGroup
 	wg.Add(len(urls))
-	for _, url := range urls {
+	for idx, url := range urls {
 		go func(url string) {
 			defer wg.Done()
-			watcher.urls = append(watcher.urls, getURL(url, watcher.db))
+			watcher.urls = append(watcher.urls, getURL(idx, url, watcher.db))
 		}(url)
 	}
 	wg.Wait()
