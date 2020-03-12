@@ -19,6 +19,10 @@ type arguments struct {
 	confPath string
 }
 
+type runnable interface {
+	Run()
+}
+
 func getArguments() (args arguments) {
 	flag.Usage = func() {
 		fmt.Printf("Usage: %s [OPTIONS] path_to_file \n", os.Args[0])
@@ -66,7 +70,6 @@ func main() {
 	var ns []watcher.Notifier
 	if conf.Web.Active {
 		webNotifier := notifiers.NewWebNotifier(conf.Web, watcherInstance)
-		go webNotifier.Server.Run()
 		ns = append(ns, webNotifier)
 
 	}
@@ -76,5 +79,10 @@ func main() {
 	// if conf.Telegram.Active {
 	// 	ns = append(ns, notifiers.NewTelegramNotifier(conf.Telegram))
 	// }
+	for _, notifier := range ns {
+		if notifier, ok := notifier.(runnable); ok {
+			go notifier.Run()
+		}
+	}
 	watcherInstance.Start(ns)
 }

@@ -12,7 +12,7 @@ import (
 
 // WebNotifier Send notifications for web users
 type WebNotifier struct {
-	Server Server
+	server Server
 }
 
 // Notify web users
@@ -21,13 +21,18 @@ func (n WebNotifier) Notify(update watcher.URLUpdate) {
 	if err != nil {
 		return
 	}
-	n.Server.Broadcast(data)
+	n.server.Broadcast(data)
+}
+
+// Run starts server
+func (n WebNotifier) Run() {
+	n.server.Run()
 }
 
 // NewWebNotifier initialize web notifier instance
 func NewWebNotifier(cfg WebConfig, watcher watcher.Watcher) WebNotifier {
 	return WebNotifier{
-		Server: NewServer(watcher, cfg.Port),
+		server: NewServer(watcher, cfg.Port),
 	}
 }
 
