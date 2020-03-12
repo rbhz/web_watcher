@@ -67,6 +67,7 @@ func (u *URL) change(hash []byte, status int, err error) URLUpdate {
 		New:     u,
 		Old:     &old,
 		Changed: changes,
+		Created: now,
 	}
 	if len(changes) != 0 {
 		u.LastChange = u.lastCheck
@@ -124,6 +125,7 @@ type URLUpdate struct {
 	New     *URL
 	Old     *URL
 	Changed []int
+	Created time.Time
 }
 
 // Error return error description
