@@ -7,6 +7,15 @@ const indexPageTemplate = `
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>HTTP checker</title>
+    <style>
+    .dot {
+        height: 25px;
+        width: 25px;
+        background-color: #bbb;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    </style>
   </head>
   <body>
       <div class="container">
@@ -17,6 +26,7 @@ const indexPageTemplate = `
                             <th scope="col">#</th>
                             <th scope="col">Url</th>
                             <th scope="col">Last change</th>
+                            <th scope="col">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -26,6 +36,10 @@ const indexPageTemplate = `
                                 <a href=""></a>
                             </td>
                             <td class="change"></td>
+                            <td class="status">
+                                <span class="dot"></span>
+                            </td>
+
                         </tr>
                     </tbody>
                 </table>
@@ -49,6 +63,22 @@ const indexPageTemplate = `
                     row.find('.url a').text(data[idx].url).attr('href', data[idx].url);
                     let changed = new Date(data[idx].last_change);
                     row.find('.change').text(changed.toLocaleString());
+                    if (data['error'] === "" && data["status"] === 200) {
+                        row.find('.status .dot').css('background-color', 'green');
+
+                    } else {
+                        row.find('.status .dot').css('background-color', 'red');
+                        let text = "";
+                        if (data[idx].error != "") {
+                            text = data[idx].error
+                        } else {
+                            text = 'Status ' + data[idx].status;
+                        }
+                        row.find('.status .dot').popover({
+                            content: text,
+                            trigger: 'hover',
+                        });
+                    }
                 }
 
                 ws = new WebSocket('ws://'+window.location.host+'/ws');
@@ -60,9 +90,24 @@ const indexPageTemplate = `
                 }
                 ws.onmessage = function(evt) {
                     data = JSON.parse(evt.data);
-                        let row = $('a[href="' +data.url+'"]').parents('tr');
-                        changed = new Date(data.last_change);
-                        row.find('.change').text(changed.toLocaleString());
+                    let row = $('a[href="' +data.url+'"]').parents('tr');
+                    changed = new Date(data.last_change);
+                    row.find('.change').text(changed.toLocaleString());
+                    if (data['error'] === "" && data["status"] === 200) {
+                        row.find('.status .dot').css('background-color', 'green');
+                        row.find('.status .dot').popover('disable');
+                    } else {
+                        row.find('.status .dot').css('background-color', 'red');
+                        let text = "";
+                        if (data.error != "") {
+                            text = data.error
+                        } else {
+                            text = 'Status ' + data.status;
+                        }
+                        row.find('.status .dot').popover({trigger: 'hover'});
+                        row.find('.status .dot').popover('enable');
+                        row.find('.status .dot').attr('data-content', text);
+                    }
                 }
                 ws.onerror = function(evt) {
                     console.log("ws ERROR: " + evt.data);
