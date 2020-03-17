@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rbhz/web_watcher/watcher"
@@ -25,25 +26,40 @@ type postmarkRequestData struct {
 
 // PostMarkNotifier Sends notifications via PostMarkAPI
 type PostMarkNotifier struct {
-	emails      []string
-	token       string
-	fromEmail   string
-	subject     string
-	messageText string
+	emails        []string
+	token         string
+	fromEmail     string
+	subject       string
+	messagePeriod time.Duration
+	updates       []watcher.URLUpdate
+	mux           sync.Mutex
 }
 
 // Notify via email
-func (n PostMarkNotifier) Notify(updates []watcher.URLUpdate) {
-	updates = filterFails(updates)
-	if len(updates) > 0 {
-		n.sendMessage(
-			n.emails,
-			getMessage(updates, n.messageText),
-		)
+func (n *PostMarkNotifier) Notify(update watcher.URLUpdate) {
+	if checkStatusChange(update) {
+		n.mux.Lock()
+		n.updates = append(n.updates, update)
+		n.mux.Unlock()
 	}
 }
 
-func (n PostMarkNotifier) sendMessage(to []string, text string) {
+// Run sends message each n seconds
+func (n *PostMarkNotifier) Run() {
+	for range time.Tick(n.messagePeriod * time.Second) {
+		n.mux.Lock()
+		if len(n.updates) == 0 {
+			n.mux.Unlock()
+		} else {
+			message := getMessage(n.updates)
+			n.updates = make([]watcher.URLUpdate, 0)
+			n.mux.Unlock()
+			n.sendMessage(n.emails, message)
+		}
+	}
+}
+
+func (n *PostMarkNotifier) sendMessage(to []string, text string) {
 	data, err := json.Marshal(&postmarkRequestData{
 		From:     n.fromEmail,
 		To:       to[0],
@@ -88,10 +104,10 @@ func NewPostMarkNotifier(cfg PostMarkConfig) PostMarkNotifier {
 		log.Fatal("Specify Postmark from address or deactivate postmark")
 	}
 	return PostMarkNotifier{
-		emails:      cfg.Emails,
-		token:       cfg.APIKey,
-		fromEmail:   cfg.FromEmail,
-		subject:     cfg.Subject,
-		messageText: cfg.MessageText,
+		emails:        cfg.Emails,
+		token:         cfg.APIKey,
+		fromEmail:     cfg.FromEmail,
+		subject:       cfg.Subject,
+		messagePeriod: cfg.MessagePeriod,
 	}
 }

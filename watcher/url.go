@@ -64,8 +64,8 @@ func (u *URL) change(hash []byte, status int, err error) URLUpdate {
 	}
 	u.lastCheck = now
 	res := URLUpdate{
-		New:     u,
-		Old:     &old,
+		New:     *u,
+		Old:     old,
 		Changed: changes,
 		Created: now,
 	}
@@ -122,18 +122,19 @@ func getURL(id int, link string, db *sql.DB) *URL {
 
 // URLUpdate contains information about url changes
 type URLUpdate struct {
-	New     *URL
-	Old     *URL
+	New     URL
+	Old     URL
 	Changed []int
 	Created time.Time
 }
 
 // Error return error description
-func (u URLUpdate) Error() string {
+func (u URLUpdate) Error() *string {
 	if u.New.Err != "" {
-		return u.New.Err
+		return &u.New.Err
 	} else if u.New.Status != http.StatusOK {
-		return strconv.Itoa(u.New.Status) + " status"
+		errText := strconv.Itoa(u.New.Status) + " status"
+		return &errText
 	}
-	return ""
+	return nil
 }

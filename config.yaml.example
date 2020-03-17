@@ -9,14 +9,14 @@ postmark:
   active: false
   apikey: "key"
   fromemail: "from@example.com"
+  messageperiod: 10
   emails:
     - "user@example.com"
   subject: "Http checker errors"
-  messagetext: "Request failed for"
 telegram:
   active: false
   bottoken: "SomeToken"
-  messagetext: "Request failed for"
+  messageperiod: 10
   users:
     - 1
     - 2

@@ -9,7 +9,7 @@ import (
 
 // Notifier interface
 type Notifier interface {
-	Notify(updated URLUpdate)
+	Notify(URLUpdate)
 }
 
 // Watcher check if urls changed
@@ -100,10 +100,10 @@ func NewWatcher(urls []string, cfg Config) Watcher {
 	var wg sync.WaitGroup
 	wg.Add(len(urls))
 	for idx, url := range urls {
-		go func(url string) {
+		go func(idx int, url string) {
 			defer wg.Done()
 			watcher.urls = append(watcher.urls, getURL(idx, url, watcher.db))
-		}(url)
+		}(idx, url)
 	}
 	wg.Wait()
 	return watcher
