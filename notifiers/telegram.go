@@ -1,12 +1,13 @@
 package notifiers
 
 import (
-	"log"
 	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rbhz/web_watcher/watcher"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // TelegramNotifier Sends notifications via TelegramBotAPI
@@ -27,13 +28,21 @@ func (n *TelegramNotifier) Notify(update watcher.URLUpdate) {
 	}
 }
 
+func (n *TelegramNotifier) log(level func() *zerolog.Event) *zerolog.Event {
+	return level().Str("notifier", "telegram")
+}
+
 // Run sends message each n seconds
 func (n *TelegramNotifier) Run() {
+	n.log(log.Info).Msg("Telegram notifier started")
 	for range time.Tick(n.messagePeriod * time.Second) {
+		n.log(log.Debug).Msg("Checking updates")
 		n.mux.Lock()
-		if len(n.updates) == 0 {
+		if count := len(n.updates); count == 0 {
+			n.log(log.Debug).Msg("Updates not found")
 			n.mux.Unlock()
 		} else {
+			n.log(log.Debug).Int("count", count).Msg("Sending updates")
 			message := getMessage(n.updates)
 			n.updates = make([]watcher.URLUpdate, 0)
 			n.mux.Unlock()
@@ -55,7 +64,7 @@ func (n *TelegramNotifier) sendMessage(user int64, message string) {
 	msg := tgbotapi.NewMessage(user, message)
 	_, err := n.bot.Send(msg)
 	if err != nil {
-		log.Printf("Failed to send telegram message: %v", err)
+		n.log(log.Error).Err(err).Msg("Failed to send telegram message")
 	}
 }
 
@@ -63,7 +72,7 @@ func (n *TelegramNotifier) sendMessage(user int64, message string) {
 func NewTelegramNotifier(cfg TelegramConfig) TelegramNotifier {
 	bot, err := tgbotapi.NewBotAPI(cfg.BotToken)
 	if err != nil {
-		log.Fatalf("Failed to initialize Telegram bot: %v", err)
+		log.Fatal().Err(err).Msg("Failed to initialize Telegram bot")
 	}
 	return TelegramNotifier{
 		bot:           bot,

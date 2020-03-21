@@ -2,9 +2,10 @@ package watcher
 
 import (
 	"database/sql"
-	"log"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Notifier interface
@@ -27,28 +28,34 @@ func (w *Watcher) Start(notifiers []Notifier) {
 	forCheck := make(chan *URL)
 	updates := make(chan URLUpdate)
 
-	for i := 0; i <= len(w.urls)/2; i++ {
-		// Start workers
+	numWorkers := (len(w.urls) / 2) + 1
+	log.Info().Int("count", numWorkers).Msg("Starting watcher workers")
+	for i := 1; i <= numWorkers; i++ {
 		go w.worker(forCheck, updates)
 	}
+
 	for {
 		select {
 		case <-time.Tick(100 * time.Millisecond):
-			now := time.Now()
-			for idx, url := range w.urls {
+			for _, url := range w.urls {
 				var period time.Duration
 				if url.Good() {
 					period = w.period * time.Second
 				} else {
 					period = w.errorPeriod * time.Second
 				}
-				if _, ok := checking[idx]; !ok &&
-					url.lastCheck.Add(period).Before(now) {
-					checking[idx] = true
+				if url.lastCheck.Add(period).Before(time.Now()) {
+					if _, ok := checking[url.id]; ok {
+						log.Warn().Str("url", url.Link).Msg("Skipped because still in checking stage")
+					}
+					checking[url.id] = true
+					log.Debug().Str("url", url.Link).Msg("Found url to check")
 					forCheck <- url
 				}
 			}
 		case update := <-updates:
+			log.Debug().Str("url", update.New.Link).Msg("Checked")
+			update.New.save(w.db)
 			delete(checking, update.Old.id)
 			if len(update.Changed) > 0 {
 				for _, n := range notifiers {
@@ -60,15 +67,18 @@ func (w *Watcher) Start(notifiers []Notifier) {
 }
 
 func (w *Watcher) worker(in <-chan *URL, out chan<- URLUpdate) {
+	log.Debug().Msg("Worker started")
 	for url := range in {
+		log.Debug().Str("url", url.Link).Msg("Got url to check")
 		out <- url.Update()
 	}
 }
 
 func (w *Watcher) initDB() {
 	db, err := sql.Open("sqlite3", w.dbPath)
+	log.Info().Msg("Initializing Database")
 	if err != nil {
-		log.Fatalf("Failed to open db: %v", err)
+		log.Fatal().Err(err).Msg("Failed to open db")
 	}
 	_, err = db.Exec(
 		`CREATE TABLE IF NOT EXISTS urls (
@@ -80,7 +90,7 @@ func (w *Watcher) initDB() {
 		);`,
 	)
 	if err != nil {
-		log.Fatalf("Failed to create table: %v", err)
+		log.Fatal().Err(err).Msg("Failed to create table")
 	}
 	w.db = db
 }

@@ -3,8 +3,11 @@ package notifiers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"sync"
+
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/gorilla/websocket"
 	"github.com/rbhz/web_watcher/watcher"
@@ -13,19 +16,22 @@ import (
 // WebNotifier Send notifications for web users
 type WebNotifier struct {
 	server Server
+	mux    sync.Mutex
 }
 
 // Notify web users
-func (n WebNotifier) Notify(update watcher.URLUpdate) {
+func (n *WebNotifier) Notify(update watcher.URLUpdate) {
 	data, err := json.Marshal(update.New)
 	if err != nil {
 		return
 	}
+	n.mux.Lock()
 	n.server.Broadcast(data)
+	n.mux.Unlock()
 }
 
 // Run starts server
-func (n WebNotifier) Run() {
+func (n *WebNotifier) Run() {
 	n.server.Run()
 }
 
@@ -49,10 +55,10 @@ func (s *Server) Run() {
 	http.HandleFunc("/", s.index)
 	http.HandleFunc("/api/list", s.list)
 	http.HandleFunc("/ws", s.upgrade)
-	fmt.Printf("Starting server on http://0.0.0.0:%v\n", s.port)
+	log.Info().Str("address", fmt.Sprintf("http://0.0.0.0:%v", s.port)).Msg("Starting web server")
 	err := http.ListenAndServe(fmt.Sprintf(":%v", s.port), nil)
 	if err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatal().Err(err).Msg("Failed to run web server")
 	}
 }
 
@@ -165,9 +171,8 @@ const indexPageTemplate = `
                     row.find('.url a').text(data[idx].url).attr('href', data[idx].url);
                     let changed = new Date(data[idx].last_change);
                     row.find('.change').text(changed.toLocaleString());
-                    if (data['error'] === "" && data["status"] === 200) {
+                    if (data[idx]['error'] == "" && data[idx]['status'] == 200) {
                         row.find('.status .dot').css('background-color', 'green');
-
                     } else {
                         row.find('.status .dot').css('background-color', 'red');
                         let text = "";

@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"log"
 	"os"
+	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/jinzhu/configor"
 	"github.com/rbhz/web_watcher/notifiers"
@@ -17,6 +20,7 @@ import (
 type arguments struct {
 	filePath string
 	confPath string
+	logLevel string
 }
 
 type runnable interface {
@@ -29,6 +33,7 @@ func getArguments() (args arguments) {
 		flag.PrintDefaults()
 	}
 	flag.StringVar(&args.confPath, "conf", "./config.yaml", "Path to config")
+	flag.StringVar(&args.logLevel, "loglevel", "info", "Logging level")
 	flag.Parse()
 	if flag.NArg() == 0 {
 		flag.Usage()
@@ -38,10 +43,19 @@ func getArguments() (args arguments) {
 	return
 }
 
+func initLogger(level string) {
+	logLevel, err := zerolog.ParseLevel(level)
+	if err != nil {
+		panic("Invalid logging level")
+	}
+	zerolog.SetGlobalLevel(logLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC1123})
+}
+
 func readFile(path string) (lines []string) {
 	file, err := os.Open(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
 	defer file.Close()
 
@@ -51,7 +65,7 @@ func readFile(path string) (lines []string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
 	return
 }
@@ -60,8 +74,10 @@ func main() {
 	args := getArguments()
 	conf := &Config{}
 	err := configor.Load(conf, args.confPath)
+	initLogger(args.logLevel)
+
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
 	watcherInstance := watcher.NewWatcher(
 		readFile(args.filePath),

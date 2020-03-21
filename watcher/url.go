@@ -5,10 +5,12 @@ import (
 	"crypto/md5"
 	"database/sql"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // Changed fields
@@ -29,10 +31,15 @@ type URL struct {
 	hash       []byte
 }
 
+func (u *URL) log(level func() *zerolog.Event) *zerolog.Event {
+	return level().Str("url", u.Link)
+}
+
 // Update url
 func (u *URL) Update() URLUpdate {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(u.Link)
+	u.log(log.Info).Msg("Updating")
 	if err != nil {
 		return u.change([]byte{}, 0, err)
 	}
@@ -78,17 +85,21 @@ func (u *URL) change(hash []byte, status int, err error) URLUpdate {
 func (u *URL) save(db *sql.DB) (err error) {
 	stmt, err := db.Prepare("INSERT OR REPLACE INTO urls VALUES(?, ?, ?, ?, ?)")
 	if err != nil {
+		u.log(log.Error).Err(err).Msg("Failed to prepare save statement")
 		return
 	}
 	defer stmt.Close()
 	res, err := stmt.Exec(u.Link, u.LastChange, u.hash, u.Status, u.Err)
 	if err != nil {
+		u.log(log.Error).Err(err).Msg("Failed to execute save statement")
 		return
 	}
 	_, err = res.RowsAffected()
 	if err != nil {
+		u.log(log.Error).Err(err).Msg("No rows updates")
 		return
 	}
+	u.log(log.Debug).Msg("Updated in database")
 	return
 }
 
@@ -110,10 +121,10 @@ func getURL(id int, link string, db *sql.DB) *URL {
 			url.Update()
 			err = url.save(db)
 			if err != nil {
-				log.Fatalf("Failed to save url to DB: %v", err)
+				log.Fatal().Err(err).Msg("Failed to save url to DB")
 			}
 		} else {
-			log.Fatalf("Failed to get url info from DB: %v", err)
+			log.Fatal().Err(err).Msg("Failed to get url info from DB")
 
 		}
 	}
