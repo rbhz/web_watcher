@@ -25,37 +25,30 @@ type Watcher struct {
 // Start watcher as daemon
 func (w *Watcher) Start(notifiers []Notifier) {
 	checking := make(map[int]bool)
-	forCheck := make(chan *URL)
 	updates := make(chan URLUpdate)
-
-	numWorkers := (len(w.urls) / 2) + 1
-	log.Info().Int("count", numWorkers).Msg("Starting watcher workers")
-	for i := 1; i <= numWorkers; i++ {
-		go w.worker(forCheck, updates)
-	}
 
 	for {
 		select {
-		case <-time.Tick(100 * time.Millisecond):
+		case <-time.Tick(w.period):
 			for _, url := range w.urls {
 				var period time.Duration
 				if url.Good() {
-					period = w.period * time.Second
+					period = w.period
 				} else {
-					period = w.errorPeriod * time.Second
+					period = w.errorPeriod
 				}
 				if url.lastCheck.Add(period).Before(time.Now()) {
 					if _, ok := checking[url.id]; ok {
 						log.Warn().Str("url", url.Link).Msg("Skipped because still in checking stage")
+						continue
 					}
 					checking[url.id] = true
 					log.Debug().Str("url", url.Link).Msg("Found url to check")
-					forCheck <- url
+					go w.check(url, updates)
 				}
 			}
 		case update := <-updates:
 			log.Debug().Str("url", update.New.Link).Msg("Checked")
-			update.New.save(w.db)
 			delete(checking, update.Old.id)
 			if len(update.Changed) > 0 {
 				for _, n := range notifiers {
@@ -66,12 +59,11 @@ func (w *Watcher) Start(notifiers []Notifier) {
 	}
 }
 
-func (w *Watcher) worker(in <-chan *URL, out chan<- URLUpdate) {
-	log.Debug().Msg("Worker started")
-	for url := range in {
-		log.Debug().Str("url", url.Link).Msg("Got url to check")
-		out <- url.Update()
-	}
+func (w *Watcher) check(url *URL, out chan<- URLUpdate) {
+	log.Debug().Str("url", url.Link).Msg("Got url to check")
+	update := url.Update()
+	update.New.save(w.db)
+	out <- update
 }
 
 func (w *Watcher) initDB() {
@@ -103,8 +95,8 @@ func (w Watcher) GetUrls() []*URL {
 // NewWatcher returns watcher
 func NewWatcher(urls []string, cfg Config) Watcher {
 	watcher := Watcher{
-		period:      cfg.Period,
-		errorPeriod: cfg.ErrorPeriod,
+		period:      cfg.Period * time.Second,
+		errorPeriod: cfg.ErrorPeriod * time.Second,
 		dbPath:      cfg.DBPath}
 	watcher.initDB()
 	var wg sync.WaitGroup

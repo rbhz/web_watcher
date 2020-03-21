@@ -93,9 +93,15 @@ func (s *Server) upgrade(w http.ResponseWriter, r *http.Request) {
 
 // Broadcast message to all active sockets
 func (s *Server) Broadcast(message []byte) {
+	wg := sync.WaitGroup{}
 	for _, conn := range s.sockets {
-		go conn.WriteMessage(websocket.TextMessage, message)
+		wg.Add(1)
+		go func(conn *websocket.Conn) {
+			defer wg.Wait()
+			conn.WriteMessage(websocket.TextMessage, message)
+		}(conn)
 	}
+	wg.Wait()
 }
 
 // NewServer returns new web server
