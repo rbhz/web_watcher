@@ -37,7 +37,7 @@ func (u *URL) log(level func() *zerolog.Event) *zerolog.Event {
 
 // Update url
 func (u *URL) Update() URLUpdate {
-	u.log(log.Info).Msg("Updating")
+	u.log(log.Debug).Msg("Updating")
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(u.Link)
 	if err != nil {
