@@ -29,7 +29,7 @@ func (w *Watcher) Start(notifiers []Notifier) {
 
 	for {
 		select {
-		case <-time.Tick(w.period):
+		case <-time.Tick(100 * time.Millisecond):
 			for _, url := range w.urls {
 				var period time.Duration
 				if url.Good() {
@@ -39,7 +39,6 @@ func (w *Watcher) Start(notifiers []Notifier) {
 				}
 				if url.lastCheck.Add(period).Before(time.Now()) {
 					if _, ok := checking[url.id]; ok {
-						log.Warn().Str("url", url.Link).Msg("Skipped because still in checking stage")
 						continue
 					}
 					checking[url.id] = true
