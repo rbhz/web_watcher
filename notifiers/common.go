@@ -15,7 +15,7 @@ func getMessage(updates []watcher.URLUpdate) string {
 			message.WriteRune('\n')
 		}
 		message.WriteString(fmt.Sprintf("%v %v: ",
-			update.Created.Round(time.Second).UTC(), update.Old.Link))
+			update.Created.Round(time.Second).UTC().Format("2-1-2006 2 15:04:05"), update.Old.Link))
 		if errText := update.Error(); errText != nil {
 			message.WriteString(*errText)
 		} else {
