@@ -4,8 +4,9 @@ import "time"
 
 // WebConfig describes web notifier confing
 type WebConfig struct {
-	Active bool `default:"false"`
-	Port   int  `default:"8080"`
+	Active   bool `default:"false"`
+	Port     int  `default:"8080"`
+	Profiler bool `default:"false"`
 }
 
 // PostMarkConfig describes postmark notifier config

@@ -5,6 +5,7 @@ app:
 web:
   active: true
   port: 8080
+  profiler: false
 postmark:
   active: false
   apikey: "key"

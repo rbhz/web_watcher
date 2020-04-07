@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"net/http"
+	"net/http/pprof"
 
 	"github.com/rs/zerolog/log"
 
@@ -38,25 +39,35 @@ func (n *WebNotifier) Run() {
 // NewWebNotifier initialize web notifier instance
 func NewWebNotifier(cfg WebConfig, watcher watcher.Watcher) WebNotifier {
 	return WebNotifier{
-		server: NewServer(watcher, cfg.Port),
+		server: NewServer(watcher, cfg.Port, cfg.Profiler),
 	}
 }
 
 // Server with rest api & static
 type Server struct {
-	watcher  watcher.Watcher
-	port     int
-	sockets  map[string]*websocket.Conn
-	upgrader websocket.Upgrader
+	watcher     watcher.Watcher
+	port        int
+	sockets     map[string]*websocket.Conn
+	upgrader    websocket.Upgrader
+	enablePprof bool
+	mux         sync.RWMutex
 }
 
 // Run web server
 func (s *Server) Run() {
-	http.HandleFunc("/", s.index)
-	http.HandleFunc("/api/list", s.list)
-	http.HandleFunc("/ws", s.upgrade)
+	srv := http.NewServeMux()
+	srv.HandleFunc("/", s.index)
+	srv.HandleFunc("/api/list", s.list)
+	srv.HandleFunc("/ws", s.upgrade)
+	if s.enablePprof {
+		srv.HandleFunc("/debug/pprof/", pprof.Index)
+		srv.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		srv.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		srv.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		srv.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
 	log.Info().Str("address", fmt.Sprintf("http://0.0.0.0:%v", s.port)).Msg("Starting web server")
-	err := http.ListenAndServe(fmt.Sprintf(":%v", s.port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%v", s.port), srv)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to run web server")
 	}
@@ -78,8 +89,15 @@ func (s *Server) upgrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	remoteAddr := c.RemoteAddr().String()
-	defer delete(s.sockets, remoteAddr)
+
+	defer func() {
+		s.mux.Lock()
+		delete(s.sockets, remoteAddr)
+		s.mux.Unlock()
+	}()
+	s.mux.Lock()
 	s.sockets[remoteAddr] = c
+	s.mux.Unlock()
 	for {
 		_, _, err := c.ReadMessage()
 		if err != nil {
@@ -93,11 +111,13 @@ func (s *Server) upgrade(w http.ResponseWriter, r *http.Request) {
 
 // Broadcast message to all active sockets
 func (s *Server) Broadcast(message []byte) {
+	s.mux.RLock()
+	defer s.mux.RUnlock()
 	wg := sync.WaitGroup{}
 	for _, conn := range s.sockets {
 		wg.Add(1)
 		go func(conn *websocket.Conn) {
-			defer wg.Wait()
+			defer wg.Done()
 			conn.WriteMessage(websocket.TextMessage, message)
 		}(conn)
 	}
@@ -105,12 +125,13 @@ func (s *Server) Broadcast(message []byte) {
 }
 
 // NewServer returns new web server
-func NewServer(w watcher.Watcher, port int) Server {
+func NewServer(w watcher.Watcher, port int, enablePprof bool) Server {
 	return Server{
-		watcher:  w,
-		port:     port,
-		sockets:  make(map[string]*websocket.Conn),
-		upgrader: websocket.Upgrader{},
+		watcher:     w,
+		port:        port,
+		sockets:     make(map[string]*websocket.Conn),
+		upgrader:    websocket.Upgrader{},
+		enablePprof: enablePprof,
 	}
 }
 
