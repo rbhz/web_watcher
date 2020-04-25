@@ -86,16 +86,16 @@ func main() {
 	var ns []watcher.Notifier
 	if conf.Web.Active {
 		notifier := notifiers.NewWebNotifier(conf.Web, watcherInstance)
-		ns = append(ns, &notifier)
+		ns = append(ns, notifier)
 
 	}
 	if conf.PostMark.Active {
 		notifier := notifiers.NewPostMarkNotifier(conf.PostMark)
-		ns = append(ns, &notifier)
+		ns = append(ns, notifier)
 	}
 	if conf.Telegram.Active {
 		notifier := notifiers.NewTelegramNotifier(conf.Telegram)
-		ns = append(ns, &notifier)
+		ns = append(ns, notifier)
 	}
 	for _, notifier := range ns {
 		if notifier, ok := notifier.(runnable); ok {

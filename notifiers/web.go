@@ -37,8 +37,8 @@ func (n *WebNotifier) Run() {
 }
 
 // NewWebNotifier initialize web notifier instance
-func NewWebNotifier(cfg WebConfig, watcher watcher.Watcher) WebNotifier {
-	return WebNotifier{
+func NewWebNotifier(cfg WebConfig, watcher watcher.Watcher) *WebNotifier {
+	return &WebNotifier{
 		server: NewServer(watcher, cfg.Port, cfg.Profiler),
 	}
 }
