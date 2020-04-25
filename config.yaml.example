@@ -21,3 +21,6 @@ telegram:
   users:
     - 1
     - 2
+slack:
+  active: false
+  webhookurl: "https://hooks.slack.com/services/1/2/3"

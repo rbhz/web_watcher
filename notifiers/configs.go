@@ -28,3 +28,10 @@ type TelegramConfig struct {
 	MessageText   string        `default:"Request failed for"`
 	MessagePeriod time.Duration `default:"10"`
 }
+
+// SlackConfig describes slack notifier configuration
+type SlackConfig struct {
+	Active        bool `default:"false"`
+	WebHookURL    string
+	MessagePeriod time.Duration `default:"10"`
+}

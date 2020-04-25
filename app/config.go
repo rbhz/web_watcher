@@ -11,4 +11,5 @@ type Config struct {
 	Web      notifiers.WebConfig
 	PostMark notifiers.PostMarkConfig
 	Telegram notifiers.TelegramConfig
+	Slack    notifiers.SlackConfig
 }

@@ -97,6 +97,10 @@ func main() {
 		notifier := notifiers.NewTelegramNotifier(conf.Telegram)
 		ns = append(ns, notifier)
 	}
+	if conf.Slack.Active {
+		notifier := notifiers.NewSlackNotifier(conf.Slack)
+		ns = append(ns, notifier)
+	}
 	for _, notifier := range ns {
 		if notifier, ok := notifier.(runnable); ok {
 			go notifier.Run()
