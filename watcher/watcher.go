@@ -26,10 +26,11 @@ type Watcher struct {
 func (w *Watcher) Start(notifiers []Notifier) {
 	checking := make(map[int]bool)
 	updates := make(chan URLUpdate)
-
+	ticker := time.NewTicker(100 * time.Microsecond)
+	defer ticker.Stop()
 	for {
 		select {
-		case <-time.Tick(100 * time.Millisecond):
+		case <-ticker.C:
 			for _, url := range w.urls {
 				var period time.Duration
 				if url.Good() {
