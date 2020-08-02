@@ -187,7 +187,7 @@ const indexPageTemplate = `
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
     <script>
         $(document).ready(function() {
-            $.get('/api/list', function(data) {
+            $.get('api/list', function(data) {
                 let tbody = $('table tbody');
                 data = JSON.parse(data);
                 for (var idx = 0; idx < data.length; idx++) {
@@ -214,8 +214,13 @@ const indexPageTemplate = `
                         });
                     }
                 }
-
-                ws = new WebSocket('ws://'+window.location.host+'/ws');
+                url = new URL(window.location.href);
+                url.protocol = 'ws:';
+                if (url.protocol == 'https:') {
+                    url.protocol = 'wss:';
+                }
+                url.pathname += 'ws';
+                ws = new WebSocket(url.href);
                 ws.onopen = function(evt) {
                     console.log("ws OPEN");
                 }
