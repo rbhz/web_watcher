@@ -14,10 +14,19 @@ jobs:
       uses: actions/checkout@v2
 
     - name: build
-      run: docker run --rm -v $(pwd):/usr/src/myapp -w /usr/src/myapp golang:1.13-stretch go build -v -o bin/watcher ./app/
+      run: |
+        docker run --rm -v $(pwd):/usr/src/myapp -w /usr/src/myapp golang:1.13-stretch go build -v -o bin/watcher ./app/
+        docker run --rm -v $(pwd):/usr/src/myapp -w /usr/src/myapp golang:1.13-stretch env GOOS=linux GOARCH=arm GOARM=5 go build go build -v -o bin/watcher_arm ./app/
 
     - name: build and push image
       run: |
         docker build -t rbhz/web_watcher:latest .
         docker login --username ${{ secrets.DOCKERHUB_USER }} --password ${{ secrets.DOCKERHUB_PASSWD }}
         docker push rbhz/web_watcher:latest
+
+    - name: build and push arm image
+      run: |
+        mv bin/watcher_arm bin/watcher
+        docker build -t rbhz/web_watcher:arm .
+        docker login --username ${{ secrets.DOCKERHUB_USER }} --password ${{ secrets.DOCKERHUB_PASSWD }}
+        docker push rbhz/web_watcher:arm
